@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-col gap-4">
+
+    <!-- 1. BAŞLIK VE ÖZET İSTATİSTİK KARTLARI -->
+    <div class="glass-panel" style="padding: 1.5rem 2rem;">
+        <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+            <div>
+                <h2 style="font-size: 1.4rem; font-weight: 700; display: flex; items-center: center; gap: 0.5rem;">
+                    <span>📋</span> Sistem İşlem Logları
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                    Sadece Root Admin yetkisine açık; Ekleme, Güncelleme, Aktif/Pasife alma, İndirme ve Giriş/Çıkış
+                    hareketlerinin denetim kayıtları.
+                </p>
+            </div>
+        </div>
+
+        <!-- İstatistik sayaç rozetleri -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
+            <div
+                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.75rem 1rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Toplam İşlem</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-top: 2px;">{{
+                    stats.total }}</div>
+            </div>
+            <div
+                style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; padding: 0.75rem 1rem;">
+                <div style="font-size: 0.75rem; color: #60a5fa;">Giriş / Çıkış</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #93c5fd; margin-top: 2px;">{{ stats.login }}
+                </div>
+            </div>
+            <div
+                style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: 8px; padding: 0.75rem 1rem;">
+                <div style="font-size: 0.75rem; color: #4ade80;">Ekleme</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #86efac; margin-top: 2px;">{{ stats.add }}</div>
+            </div>
+            <div
+                style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; padding: 0.75rem 1rem;">
+                <div style="font-size: 0.75rem; color: #fbbf24;">Güncelleme</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #fde68a; margin-top: 2px;">{{ stats.update_count
+                    }}</div>
+            </div>
+            <div
+                style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px; padding: 0.75rem 1rem;">
+                <div style="font-size: 0.75rem; color: #c084fc;">Aktif / Pasif</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #e9d5ff; margin-top: 2px;">{{ stats.toggle }}
+                </div>
+            </div>
+            <div
+                style="background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.2); border-radius: 8px; padding: 0.75rem 1rem;">
+                <div style="font-size: 0.75rem; color: #2dd4bf;">İndirme</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #99f6e4; margin-top: 2px;">{{ stats.download }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. LOG TABLOSU VE FİLTRELEME -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="flex items-center gap-3" style="flex: 1; max-width: 550px;">
+                <input type="text" id="logSearchInput" class="glass-input"
+                    placeholder="🔍 Kullanıcı, Tarih veya İşlem Ara..." style="flex: 2;">
+                <select id="actionFilterSelect" class="glass-select" style="flex: 1; min-width: 140px;">
+                    <option value="">Tüm İşlem Türleri</option>
+                    <option value="Giriş">Giriş</option>
+                    <option value="Çıkış">Çıkış</option>
+                    <option value="Ekleme">Ekleme</option>
+                    <option value="Güncelleme">Güncelleme</option>
+                    <option value="Aktif/Pasif">Aktif/Pasif</option>
+                    <option value="İndirme">İndirme</option>
+                </select>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                Gösterilen: <strong id="visibleLogCount" style="color: var(--primary);">{{ logs|length }}</strong> kayıt
+            </div>
+        </div>
+
+        <div class="glass-table-container">
+            <table class="glass-table" id="logsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 110px;">Tarih</th>
+                        <th style="width: 90px;">Saat</th>
+                        <th style="width: 170px;">Kullanıcı</th>
+                        <th>Yapılan İşlem</th>
+                        <th style="width: 120px; text-align: center;">İşlem Türü</th>
+                        <th style="width: 120px;">IP Adresi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr class="log-row" data-action="{{ log.action_type }}">
+                        <td style="font-weight: 600; white-space: nowrap;">
+                            {{ log.log_date }}
+                        </td>
+                        <td style="color: var(--text-muted); font-family: monospace; white-space: nowrap;">
+                            {{ log.log_time }}
+                        </td>
+                        <td>
+                            <strong style="color: var(--primary);">{{ log.username }}</strong>
+                        </td>
+                        <td style="line-height: 1.4;">
+                            {{ log.description }}
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            {% if log.action_type == 'Giriş' %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);">Giriş</span>
+                            {% elif log.action_type == 'Çıkış' %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(148,163,184,0.2); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.3);">Çıkış</span>
+                            {% elif log.action_type == 'Ekleme' %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.3);">Ekleme</span>
+                            {% elif log.action_type == 'Güncelleme' %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3);">Güncelleme</span>
+                            {% elif log.action_type == 'Aktif/Pasif' %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.3);">Aktif/Pasif</span>
+                            {% elif log.action_type == 'İndirme' %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(20,184,166,0.2); color: #2dd4bf; border: 1px solid rgba(20,184,166,0.3);">İndirme</span>
+                            {% else %}
+                            <span
+                                style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.1); color: var(--text-muted);">{{
+                                log.action_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="color: var(--text-muted); font-size: 0.8rem; font-family: monospace;">
+                            {{ log.ip_address or '-' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr id="noLogsRow">
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            Henüz kayıtlı bir işlem logu bulunmamaktadır.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const searchInput = document.getElementById('logSearchInput');
+    const filterSelect = document.getElementById('actionFilterSelect');
+    const rows = document.querySelectorAll('.log-row');
+    const countDisplay = document.getElementById('visibleLogCount');
+
+    function filterLogs() {
+        const query = searchInput.value.toLowerCase().trim();
+        const selectedAction = filterSelect.value.trim();
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const rowText = row.textContent.toLowerCase();
+            const rowAction = row.getAttribute('data-action') || '';
+
+            const matchesQuery = !query || rowText.includes(query);
+            const matchesAction = !selectedAction || rowAction === selectedAction;
+
+            if (matchesQuery && matchesAction) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (countDisplay) {
+            countDisplay.textContent = visibleCount;
+        }
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterLogs);
+    if (filterSelect) filterSelect.addEventListener('change', filterLogs);
+</script>
+{% endblock %}
